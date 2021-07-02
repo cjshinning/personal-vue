@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>手写vue</title>
+</head>
+<body>
+    <script>
+        // var Book = {
+        //     name: 'vue权威指南'
+        // } 
+        // console.log(Book.name);
+
+        const Book = {};
+        // let name = '';   
+        Object.defineProperty(Book, 'name', {
+            set(value){
+                name = value;
+                console.log(`你取了一个书名叫做：${value}`);
+            },
+            get(){
+                return `《${name}》`
+            }
+        })
+        Book.name = 'vue权威指南';
+        console.log(Book.name);
+        // 你取了一个书名叫做：vue权威指南
+        // 《vue权威指南》
+    </script>
+</body>
+</html>

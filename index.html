@@ -8,6 +8,7 @@
 </head>
 <body>
     <script>
+        // 1、实现Observer
         function defineReactive(data, key, val){
             observe(val);
             const dep = new Dep();
@@ -15,9 +16,9 @@
                 enumerable: true,
                 configurable: true,
                 get(){
-                    // if(是否需要添加订阅器){
-                    //     dep.addSub(wather);
-                    // }
+                    if(Dep.target){
+                        dep.addSub(Dep.target);
+                    }
                     return val;
                 },
                 set(newVal){
@@ -37,16 +38,6 @@
                 defineReactive(data, key, data[key]);
             })
         }
-
-        var libary = {
-            book1: {
-                name: ''
-            },
-            book2: ''
-        };
-        observe(libary);
-        libary.book1.name = 'vue权威指南';
-        libary.book2 = '没有书籍';
         
         // 消息订阅器
         function Dep(){
@@ -62,6 +53,44 @@
                 })
             }
         }
+
+        // 2、实现Wather
+        function Watcher(vm, exp, cb){
+            this.cb = cb;
+            this.vm = vm;
+            this.exp = exp;
+            this.value = this.get();
+        }
+
+        Watcher.prototype = {
+            update(){
+                this.run();
+            },
+            run(){
+                var value = this.vm.data[this.exp];
+                var oldVal = this.value;
+                if(value !== oldVal){
+                    this.value = value;
+                    this.cb.call(this.vm, value, oldVal);
+                }
+            },
+            get(){
+                Dep.target = this;
+                var value = this.vm.data[this.exp];
+                Dep.target = null;
+                return value;
+            }
+        }
+
+        var libary = {
+            book1: {
+                name: ''
+            },
+            book2: ''
+        };
+        observe(libary);
+        libary.book1.name = 'vue权威指南';
+        libary.book2 = '没有书籍';
     </script>
 </body>
 </html>

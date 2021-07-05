@@ -10,15 +10,21 @@
     <script>
         function defineReactive(data, key, val){
             observe(val);
+            const dep = new Dep();
             Object.defineProperty(data, key, {
                 enumerable: true,
                 configurable: true,
                 get(){
+                    // if(是否需要添加订阅器){
+                    //     dep.addSub(wather);
+                    // }
                     return val;
                 },
                 set(newVal){
+                    if(val === newVal) return;
                     val = newVal;
                     console.log(`属性${key}已经被监听了，现在值为：${newVal}`);
+                    dep.notify();
                 }
             })
         }
@@ -41,7 +47,21 @@
         observe(libary);
         libary.book1.name = 'vue权威指南';
         libary.book2 = '没有书籍';
-
+        
+        // 消息订阅器
+        function Dep(){
+            this.subs = [];
+        }
+        Dep.prototype = {
+            addSub(sub){
+                this.subs.push(sub);
+            },
+            notify(){
+                this.subs.forEach(sub => {
+                    sub.update();
+                })
+            }
+        }
     </script>
 </body>
 </html>

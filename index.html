@@ -8,26 +8,40 @@
 </head>
 <body>
     <script>
-        // var Book = {
-        //     name: 'vue权威指南'
-        // } 
-        // console.log(Book.name);
+        function defineReactive(data, key, val){
+            observe(val);
+            Object.defineProperty(data, key, {
+                enumerable: true,
+                configurable: true,
+                get(){
+                    return val;
+                },
+                set(newVal){
+                    val = newVal;
+                    console.log(`属性${key}已经被监听了，现在值为：${newVal}`);
+                }
+            })
+        }
 
-        const Book = {};
-        // let name = '';   
-        Object.defineProperty(Book, 'name', {
-            set(value){
-                name = value;
-                console.log(`你取了一个书名叫做：${value}`);
-            },
-            get(){
-                return `《${name}》`
+        function observe(data){
+            if(!data || typeof data !== 'object'){
+                return;
             }
-        })
-        Book.name = 'vue权威指南';
-        console.log(Book.name);
-        // 你取了一个书名叫做：vue权威指南
-        // 《vue权威指南》
+            Object.keys(data).forEach(function(key){
+                defineReactive(data, key, data[key]);
+            })
+        }
+
+        var libary = {
+            book1: {
+                name: ''
+            },
+            book2: ''
+        };
+        observe(libary);
+        libary.book1.name = 'vue权威指南';
+        libary.book2 = '没有书籍';
+
     </script>
 </body>
 </html>

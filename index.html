@@ -9,9 +9,12 @@
 <body>
     <div id="app">
         <h2>{{title}}</h2>
+        <input type="text" v-model="name" />
         <h1 id="name">{{name}}</h1>
+        <button v-on:click="clickMe">click me!</button>
     </div>
     <script>
+        // 参考：https://juejin.cn/post/6844903479044112391
         // 1、实现Observer
         function defineReactive(data, key, val){
             observe(val);
@@ -118,12 +121,32 @@
                 [].slice.call(childNodes).forEach((node) => {
                     const reg = /\{\{\s*(.*)\s*\}\}/;
                     const text = node.textContent;
-                    if(this.isTextNode(node) && reg.test(text)){
+                    
+                    if(this.isElementNode(node)){
+                        this.compile(node);
+                    }else if(this.isTextNode(node) && reg.test(text)){
                         this.compileText(node, reg.exec(text)[1]);
                     };
 
                     if(node.childNodes && node.childNodes.length){
                         this.compileElement(node);
+                    }
+                })
+            },
+            compile(node){
+                const nodeAttrs = node.attributes;
+                Array.prototype.forEach.call(nodeAttrs, attr => {
+                    var attrName = attr.name;
+                    if(this.isDirective(attrName)){
+                        const exp = attr.value;
+                        const dir = attrName.substring(2);
+                        // console.log(exp, dir);
+                        if(this.isEventDirective(dir)){     //事件指令
+                            this.compileEvent(node, this.vm, exp, dir);
+                        }else{      //v-model指令
+                            this.compileModel(node, this.vm, exp, dir);
+                        }
+                        node.removeAttribute(attrName);
                     }
                 })
             },
@@ -134,8 +157,42 @@
                     this.updateText(node, value);
                 })
             },
+            compileEvent(node, vm, exp, dir){
+                const eventType = dir.split(':')[1];
+                var cb = vm.methods && vm.methods[exp];
+
+                if(eventType && cb){
+                    node.addEventListener(eventType, cb.bind(vm), false);
+                }
+            },
+            compileModel(node, vm, exp, dir){
+                let val = this.vm[exp];
+                this.modelUpdater(node, val);
+                new Watcher(this.vm, exp, (value) => {
+                    this.modelUpdater(node, value);
+                })
+
+                node.addEventListener('input',  e => {
+                    const newValue = e.target.value;
+                    if(val === newValue) return;
+                    this.vm[exp] = newValue;
+                    val = newValue;
+                })
+            },
             updateText(node, value){
                 node.textContent = typeof value === 'undefined' ? '' : value;
+            },
+            modelUpdater(node, value){
+                node.value = typeof value === 'undefined' ? '' : value;
+            },
+            isEventDirective(dir){
+                return dir.indexOf('on:') === 0;
+            },
+            isDirective(attr){
+                return attr.indexOf('v-') === 0;
+            },
+            isElementNode(node){
+                return node.nodeType === 1;
             },
             isTextNode(node){
                 return node.nodeType === 3;
@@ -146,6 +203,7 @@
         function SelfVue(options){
             this.vm = this;
             this.data = options.data;
+            this.methods = options.methods;
             
             Object.keys(this.data).forEach(key => {
                 this.proxyKeys(key);
@@ -153,11 +211,12 @@
 
             observe(this.data);
             new Compile(options.el, this.vm);
+            options.mounted.call(this);
             // options.el.innerHTML = this.data[exp];
             // new Watcher(this, exp, (value) => {
             //     el.innerHTML = value;
             // })
-            return this;
+            // return this;
         }
 
         SelfVue.prototype = {
@@ -176,22 +235,41 @@
             }
         }
 
-        // 版本三
+        // 版本四
         var selfVue = new SelfVue({
             el: '#app',
             data: {
                 title: 'hello world',
-                name: ''
+                name: 'canfoo'
+            },
+            methods: {
+                clickMe(){
+                    this.title = 'hello world';
+                }
+            },
+            mounted() {
+                window.setTimeout(()=>{
+                    selfVue.title = '你好';
+                }, 2000);
             }
         })
 
-        window.setTimeout(()=>{
-            selfVue.title = '你好';
-        }, 2000);
+        // 版本三
+        // var selfVue = new SelfVue({
+        //     el: '#app',
+        //     data: {
+        //         title: 'hello world',
+        //         name: ''
+        //     }
+        // })
 
-         window.setTimeout(()=>{
-            selfVue.name = 'canfoo';
-        }, 2500);
+        // window.setTimeout(()=>{
+        //     selfVue.title = '你好';
+        // }, 2000);
+
+        //  window.setTimeout(()=>{
+        //     selfVue.name = 'canfoo';
+        // }, 2500);
         
         // 版本二
         // const ele = document.querySelector('#name');
@@ -215,6 +293,7 @@
         // observe(libary);
         // libary.book1.name = 'vue权威指南';
         // libary.book2 = '没有书籍';
+
     </script>
 </body>
 </html>

@@ -7,7 +7,10 @@
     <title>手写vue</title>
 </head>
 <body>
-    <h1 id="name">{{name}}</h1>
+    <div id="app">
+        <h2>{{title}}</h2>
+        <h1 id="name">{{name}}</h1>
+    </div>
     <script>
         // 1、实现Observer
         function defineReactive(data, key, val){
@@ -83,19 +86,77 @@
             }
         }
 
+        // 实现Complile
+        function Compile(el, vm){
+            this.vm = vm;
+            this.el = document.querySelector(el);
+            this.fragment = null;
+            this.init();
+        }
+
+        Compile.prototype = {
+            init(){
+                if(this.el){
+                    this.fragment = this.nodeToFragment(this.el);
+                    this.compileElement(this.fragment);
+                    this.el.appendChild(this.fragment);
+                }else{
+                    console.log('Dom元素不存在');
+                }
+            },
+            nodeToFragment(el){
+                let fragment = document.createDocumentFragment();
+                let child = el.firstChild;
+                while(child){
+                    fragment.appendChild(child);
+                    child = el.firstChild;
+                }
+                return fragment;
+            },
+            compileElement(el){
+                let childNodes = el.childNodes;
+                [].slice.call(childNodes).forEach((node) => {
+                    const reg = /\{\{\s*(.*)\s*\}\}/;
+                    const text = node.textContent;
+                    if(this.isTextNode(node) && reg.test(text)){
+                        this.compileText(node, reg.exec(text)[1]);
+                    };
+
+                    if(node.childNodes && node.childNodes.length){
+                        this.compileElement(node);
+                    }
+                })
+            },
+            compileText(node, exp){
+                const initText = this.vm[exp];
+                this.updateText(node, initText);
+                new Watcher(this.vm, exp, (value) => {
+                    this.updateText(node, value);
+                })
+            },
+            updateText(node, value){
+                node.textContent = typeof value === 'undefined' ? '' : value;
+            },
+            isTextNode(node){
+                return node.nodeType === 3;
+            }
+        }
+
         // 实现selfVue
-        function SelfVue(data, el, exp){
-            this.data = data;
+        function SelfVue(options){
+            this.vm = this;
+            this.data = options.data;
             
-            Object.keys(data).forEach(key => {
+            Object.keys(this.data).forEach(key => {
                 this.proxyKeys(key);
             })
 
-            observe(data);
-            el.innerHTML = this.data[exp];
-            new Watcher(this, exp, (value) => {
-                el.innerHTML = value;
-            })
+            observe(this.data);
+            new Compile(options.el, this.vm);
+            // options.el.innerHTML = this.data[exp];
+            // new Watcher(this, exp, (value) => {
+            //     el.innerHTML = value;
+            // })
             return this;
         }
 
@@ -115,17 +176,36 @@
             }
         }
 
-        const ele = document.querySelector('#name');
-        const selfVue = new SelfVue({
-            name: 'Hello world',
-        }, ele, 'name');
+        // 版本三
+        var selfVue = new SelfVue({
+            el: '#app',
+            data: {
+                title: 'hello world',
+                name: ''
+            }
+        })
 
-        window.setTimeout(() => {
-            console.log('name值改变了');
-            // selfVue.data.name = 'Canfoo';
-            selfVue.name = 'Canfoo';
-        }, 2000)
+        window.setTimeout(()=>{
+            selfVue.title = '你好';
+        }, 2000);
 
+         window.setTimeout(()=>{
+            selfVue.name = 'canfoo';
+        }, 2500);
+        
+        // 版本二
+        // const ele = document.querySelector('#name');
+        // const selfVue = new SelfVue({
+        //     name: 'Hello world',
+        // }, ele, 'name');
+
+        // window.setTimeout(() => {
+        //     console.log('name值改变了');
+        //     // selfVue.data.name = 'Canfoo';
+        //     selfVue.name = 'Canfoo';
+        // }, 2000)
+        
+        // 版本一
         // var libary = {
         //     book1: {
         //         name: ''
